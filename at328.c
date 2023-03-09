@@ -49,7 +49,7 @@ void serial_out (char * word, int len) {
 	}
 }
 
-void float_to_str(float f, char* str) {
+void float_to_str(float f, char* str, int len) {
 	char *tmpSign = (f < 0) ? "-" : "";
 	float tmpVal = (f < 0) ? -f : f;
 
@@ -58,7 +58,7 @@ void float_to_str(float f, char* str) {
 	int tmpInt2 = tmpFrac * 10000;  // Turn into integer (123).
 
 	// Print as parts, note that you need 0-padding for fractional bit.
-	sprintf (str, "%s%d.%04d", tmpSign, tmpInt1, tmpInt2);
+	snprintf (str,len,"%s%d.%04d", tmpSign, tmpInt1, tmpInt2);
 }
 
 /*
@@ -76,21 +76,24 @@ int main(void)
 	i2c_init (BDIV);
 	char outBuf[64];
 	char* str = "hello world";
-	float f = 10.5;
+	float f = 10.3;
 
 	unsigned char addr = 0x0D;
-	unsigned char rbuf [1];
-	i2c_io(0x1D, &addr, 1, NULL, 0, rbuf, 2);
+	unsigned char rbuf [2];
+	rbuf[0] = 0;
+	rbuf[1] = 0;
+	i2c_io((0x1D << 1), &addr, 1, NULL, 0, rbuf, 1);
 
 
-	char floatBuf[6];
-	float_to_str(f, floatBuf);
+	char floatBuf[10];
+	float_to_str(f, floatBuf, 10);
+	unsigned char a = 10;
 
-
-	snprintf(outBuf, 30, "%s, %X, %s\n\r", str, rbuf[0], floatBuf);
 
 	while(1) {
 		serial_in();
+		snprintf(outBuf, 64, "%s, %X, %s\n\r", str, rbuf[0], floatBuf);
+
 		serial_out(outBuf, 30);
 		
 	}
