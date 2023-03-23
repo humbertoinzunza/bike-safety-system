@@ -21,80 +21,47 @@
 #include <avr/io.h>
 #include <stdio.h>
 #include "i2c.h"
+#include "serial_debug.h"
+#include "mma8451.h"
 
-#define UBRR 47
-
-# define FOSC 7372800 // Clock frequency = Oscillator freq .
-# define BDIV ( FOSC / 100000 - 16) / 2 + 1
-
-void serial_init ( unsigned short ubrr ) {
-	UBRR0 = ubrr ; // Set baud rate
-	UCSR0B |= (1 << TXEN0 ); // Turn on transmitter
-	UCSR0B |= (1 << RXEN0 ); // Turn on receiver
-	UCSR0C = (3 << UCSZ00 ); // Set for async . operation , no parity ,
-	// one stop bit , 8 data bits
-}
-
-/*
-serial_out - Output a byte to the USART0 port
-*/
-void serial_out_char ( char ch ) {
-	while (( UCSR0A & (1 << UDRE0 )) == 0);
-	UDR0 = ch ;
-}
-
-void serial_out (char * word, int len) {
-	for (int i = 0; i < len; i++) {
-		serial_out_char (word[i]);
-	}
-}
-
-void float_to_str(float f, char* str, int len) {
-	char *tmpSign = (f < 0) ? "-" : "";
-	float tmpVal = (f < 0) ? -f : f;
-
-	int tmpInt1 = tmpVal;                  // Get the integer (678).
-	float tmpFrac = tmpVal - tmpInt1;      // Get fraction (0.0123).
-	int tmpInt2 = tmpFrac * 10000;  // Turn into integer (123).
-
-	// Print as parts, note that you need 0-padding for fractional bit.
-	snprintf (str,len,"%s%d.%04d", tmpSign, tmpInt1, tmpInt2);
-}
-
-/*
-serial_in - Read a byte from the USART0 and return it
-*/
-char serial_in () {
-	while ( !( UCSR0A & (1 << RXC0 )) );
-	return UDR0 ;
-}
 
 int main(void)
 {
 
 	serial_init(UBRR);
 	i2c_init (BDIV);
+	// char outBuf[64];
+	// char* str = "hello world";
+	// float f = 10.3;
+
+	// unsigned char addr = 0x0D;
+	// unsigned char rbuf [2];
+	// rbuf[0] = 0;
+	// rbuf[1] = 0;
+	// i2c_io((0x1D << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+
+	// char floatBuf[10];
+	// float_to_str(f, floatBuf, 10);
+	// unsigned char a = 10;
+
+			// mma_init();
+	mma_init();
+
+
+	int x, y, z;
+	
+
 	char outBuf[64];
-	char* str = "hello world";
-	float f = 10.3;
 
-	unsigned char addr = 0x0D;
-	unsigned char rbuf [2];
-	rbuf[0] = 0;
-	rbuf[1] = 0;
-	i2c_io((0x1D << 1), &addr, 1, NULL, 0, rbuf, 1);
-
-
-	char floatBuf[10];
-	float_to_str(f, floatBuf, 10);
-	unsigned char a = 10;
+	mma_calibrate(4);
 
 
 	while(1) {
 		serial_in();
-		snprintf(outBuf, 64, "%s, %X, %s\n\r", str, rbuf[0], floatBuf);
-
-		serial_out(outBuf, 30);
+		mma_read_calibrated(&x, &y, &z);
+		snprintf(outBuf, 64, "x: %d, y: %d, z: %d\n\r", x, y, z);
+		serial_out(outBuf, 64);
 		
 	}
 
