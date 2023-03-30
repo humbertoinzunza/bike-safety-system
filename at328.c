@@ -23,6 +23,7 @@
 #include "i2c.h"
 #include "serial_debug.h"
 #include "mma8451.h"
+#include <util/delay.h>
 
 
 int main(void)
@@ -30,15 +31,67 @@ int main(void)
 
 	serial_init(UBRR);
 	i2c_init (BDIV);
-	// char outBuf[64];
+	char outBuf[64];
 	// char* str = "hello world";
 	// float f = 10.3;
 
-	// unsigned char addr = 0x0D;
-	// unsigned char rbuf [2];
+	unsigned char addr = 0x5D;
+	unsigned char rbuf [2];
 	// rbuf[0] = 0;
 	// rbuf[1] = 0;
-	// i2c_io((0x1D << 1), &addr, 1, NULL, 0, rbuf, 1);
+	i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+
+	addr = 0x5E;
+
+	unsigned char wbuf[1] = {0x05};
+
+	i2c_io((0x5A << 1), &addr, 1, wbuf, 1, NULL, 0);
+
+	addr = 0x41;
+
+	//touch threshold
+
+	wbuf[0] = 0x00;
+
+	i2c_io((0x5A << 1), &addr, 1, wbuf, 1, NULL, 0);
+
+
+	//release threshold
+
+	addr = 0x42;
+
+	wbuf[0] = 10;
+
+	i2c_io((0x5A << 1), &addr, 1, wbuf, 1, NULL, 0);
+
+
+	// Read filtered value
+	addr = 0x04;
+
+	i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 2);
+
+	int filt_val = rbuf[1] << 8 | rbuf[0];
+
+	//Read baseline value
+
+	addr = 0x1E;
+
+	i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+	int base_val = rbuf[0];
+
+	// Read touch status
+
+	addr = 0x00;
+
+	i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+	int touch_status = rbuf[0];
+	
+
+	snprintf(outBuf, 64, "T: %X, b: %d, f: %d\n\r", touch_status, base_val, filt_val);
+	serial_out(outBuf, 64); 
 
 
 	// char floatBuf[10];
@@ -46,23 +99,51 @@ int main(void)
 	// unsigned char a = 10;
 
 			// mma_init();
-	mma_init();
+	// mma_init();
 
 
-	int x, y, z;
+	// // int x, y, z;
 	
 
-	char outBuf[64];
+	// // char outBuf[64];
 
-	mma_calibrate(4);
+	// mma_calibrate(4);
 
 
 	while(1) {
-		serial_in();
-		mma_read_calibrated(&x, &y, &z);
-		snprintf(outBuf, 64, "x: %d, y: %d, z: %d\n\r", x, y, z);
-		serial_out(outBuf, 64);
+		_delay_ms(100);
 		
+
+		// Read filtered value
+		addr = 0x04;
+
+		i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 2);
+
+		filt_val = rbuf[1] << 8 | rbuf[0];
+
+		//Read baseline value
+
+		addr = 0x1E;
+
+		i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+		base_val = rbuf[0];
+
+		// Read touch status
+
+		addr = 0x00;
+
+		i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+		touch_status = rbuf[0];
+		
+
+		snprintf(outBuf, 64, "T: %X, b: %d, f: %d\n\r", touch_status, base_val, filt_val);
+		serial_out(outBuf, 64); 
+	
+
+		snprintf(outBuf, 64, "Capacitive touch data: %X\n\r", rbuf[0]);
+		serial_out(outBuf, 64); 
 	}
 
 
