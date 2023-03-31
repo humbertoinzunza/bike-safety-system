@@ -1,27 +1,25 @@
 #include "i2c.h"
 #include "lcd.h"
+#include "serial.h"
 #include <util/delay.h>
 
 #define FOSC 7372970                        // Clock frequency = Oscillator freq.
+#define BAUD 9600              // Baud rate used by the LCD
+#define MYUBRR FOSC/16/BAUD-1   // Value for UBRR0 register
 #define BDIV (FOSC / 50000 - 16) / 2 + 1   // Puts I2C rate just below 50kHz
 
 int main(void)
 {
     struct LCD lcd;
     i2c_init(BDIV);
-    _delay_ms(2000);/*
-    unsigned char buf[2] = { 0xFE, 0x4B };
-    i2c_io(0x50, buf, 2, NULL, 0, NULL, 0);
-    buf[0] = 'A';
-    while(1) {
-        _delay_ms(500);
-        i2c_io(0x50, buf, 1, NULL, 0, NULL, 0);\
-    }*/
-   lcd_init(&lcd);
-   unsigned char string[] = "Hello World!";
+    serial_init(MYUBRR);
+    _delay_ms(1000);
+    lcd_init(&lcd);
+    unsigned char ch;
    while(1) {
-        _delay_ms(500);
-        print_string(&lcd, string);
+        ch = serial_in();
+        _delay_ms(10);
+        print_character(&lcd, ch);
    }
 }
 
