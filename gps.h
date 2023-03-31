@@ -1,0 +1,1 @@
+void read_sentence(unsigned char *, unsigned char);
