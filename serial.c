@@ -1,12 +1,12 @@
 #include <avr/io.h>
-#include <serial.h>
+#include <avr/interrupt.h>
+#include "serial.h"
 
 /*
     serial_init - Initialize the USART port at a given baud rate.
 */
-void serial_init(unsigned short baud_rate)
+void serial_init(unsigned short ubrr)
 {
-    unsigned short ubrr = (CLOCKRATE/16)/baud_rate - 1;
     UBRR0 = ubrr;           // Set baud rate
     UCSR0B |= (1 << TXEN0); // Turn on transmitter
     UCSR0B |= (1 << RXEN0); // Turn on receiver
@@ -16,9 +16,19 @@ void serial_init(unsigned short baud_rate)
 /*
     serial_out - Output a byte to the USART0 port.
 */
-void serial_out(char character) {
+void serial_out_byte(char character) {
     while (!(UCSR0A & (1 << UDRE0)));
     UDR0 = character;
+}
+
+/*
+    serial_out_array - Output an array of bytes to the USART0 port.
+*/
+void serial_out_array(char *array, unsigned short length) {
+    unsigned short i;
+    for (i = 0; i < length; i++) {
+        serial_out_byte(array[i]);
+    }
 }
 
 /*
@@ -28,4 +38,9 @@ char serial_in()
 {
     while (!( UCSR0A & (1 << RXC0)));
     return UDR0;
+}
+
+// Use interrupts to 
+ISR(USART_RX_vect) {
+
 }
