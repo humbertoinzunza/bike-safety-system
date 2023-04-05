@@ -1,26 +1,40 @@
-#include "serial.h"
 #include "gps.h"
 #include <stdlib.h>
+#include <avr/io.h>
 
-unsigned char read_sentence(unsigned char *buffer, unsigned char max_length) {
-    unsigned char last_chars[2] = { 0, 0 };
-    unsigned short bytes_read = 0;
+volatile static unsigned char buffer[100];
+volatile unsigned char bytes_read = 0;
+volatile unsigned char data_ready = 0;
+volatile short longitude_decimal = 0;
+volatile unsigned char state = 0;
 
-    while (last_chars[0] != '\r' && last_chars[1] != '\n' && max_length > 0) {
-        buffer[bytes_read] = serial_in();
-        last_chars[0] = last_chars[1];
-        last_chars[1] = buffer[bytes_read];
-        bytes_read++;
-        max_length--;
-    }
-    return bytes_read;
+void gps_init(unsigned short ubrr)
+{
+    UBRR0 = ubrr;           // Set baud rate
+    UCSR0B |= (1 << TXEN0); // Turn on transmitter
+    UCSR0B |= (1 << RXEN0); // Turn on receiver
+    UCSR0B |= (1 << RXCIE0); // Enable interrupts
+    UCSR0C = (3 << UCSZ00); // Set for asynchronous operation, no parity, one stop bit, 8 data bits
+}
+
+ISR(USART_RX_vect) {
+    unsigned char ch = UDR0;
+  if (ch == '$')
+      bytes_read = 0;
+      
+  buffer[bytes_read] = ch;
+  bytes_read++;
+
+  if(bytes_read > 0 && buffer[bytes_read - 1] == '\r' && buffer[bytes_read] == '\n')
+      data_ready = 1;
+  else
+      data_ready = 0;
 }
 
 unsigned char parse_sentence(unsigned char *buffer, short *response)
 {
     unsigned char index = 0;
-    unsigned char state = 0;
-    unsigned char first_L[] = "GPGGA";
+    unsigned char first_L[] = "GPRMC";
     short latitude_decimal = 0;
     short latitude_minutes = 0;
     short longitude_decimal = 0;
