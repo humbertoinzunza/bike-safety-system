@@ -17,9 +17,12 @@ int main(void)
   i2c_init(BDIV);
   _delay_ms(1000);
   lcd_init(&lcd);
-  sei();
-  
+  serial_init(MYUBRR);
+  unsigned char buffer[100];
   while(1) {
+    get_gpgga(buffer);
+    set_cursor(&lcd, 0, 0);
+    print_string(&lcd, buffer);
   }
 
 }
