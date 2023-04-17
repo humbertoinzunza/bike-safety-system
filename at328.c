@@ -23,75 +23,104 @@
 #include "i2c.h"
 #include "serial_debug.h"
 #include "mma8451.h"
+#include "mpr121.h"
 #include <util/delay.h>
+#include "SIM.h"
 
 
 int main(void)
 {
 
-	serial_init(UBRR);
-	i2c_init (BDIV);
-	char outBuf[64];
+	sim_init();
+
+	char * msg = "hello kyle from atmega!\x1A";
+	sim_send(msg, 24);
+
+
+
+	// char * msg = "AT+CMGF=1\r\n";
+	// serial_out (msg, 11);
+	// // serial_out_char (0x30);
+	// _delay_ms(500);
+
+	// msg = "AT+CMGS=\"+16509467854\"\r\n";
+	// serial_out (msg, 24);
+	// // serial_out_char (0x30);
+	// _delay_ms(1000);
+	// msg = "hello world from atmega!\x1A";
+	// serial_out (msg, 25);
+	// _delay_ms(500);
+
+
+	
+
+
+
+	// i2c_init (BDIV);
+	// char outBuf[64];
 	// char* str = "hello world";
 	// float f = 10.3;
 
-	unsigned char addr = 0x5D;
-	unsigned char rbuf [2];
-	// rbuf[0] = 0;
-	// rbuf[1] = 0;
-	i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+	// unsigned char addr = 0x5D;
+	// unsigned char rbuf [2];
+	// // rbuf[0] = 0;
+	// // rbuf[1] = 0;
+	// i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+	// mpr_init();
+	// mpr_calib(8);
 
 
-	addr = 0x5E;
+	// addr = 0x5E;
 
-	unsigned char wbuf[1] = {0x05};
+	// unsigned char wbuf[1] = {0x05};
 
-	i2c_io((0x5A << 1), &addr, 1, wbuf, 1, NULL, 0);
+	// i2c_io((0x5A << 1), &addr, 1, wbuf, 1, NULL, 0);
 
-	addr = 0x41;
+	// addr = 0x41;
 
-	//touch threshold
+	// //touch threshold
 
-	wbuf[0] = 0x00;
+	// wbuf[0] = 0x00;
 
-	i2c_io((0x5A << 1), &addr, 1, wbuf, 1, NULL, 0);
-
-
-	//release threshold
-
-	addr = 0x42;
-
-	wbuf[0] = 10;
-
-	i2c_io((0x5A << 1), &addr, 1, wbuf, 1, NULL, 0);
+	// i2c_io((0x5A << 1), &addr, 1, wbuf, 1, NULL, 0);
 
 
-	// Read filtered value
-	addr = 0x04;
+	// //release threshold
 
-	i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 2);
+	// addr = 0x42;
 
-	int filt_val = rbuf[1] << 8 | rbuf[0];
+	// wbuf[0] = 10;
 
-	//Read baseline value
+	// i2c_io((0x5A << 1), &addr, 1, wbuf, 1, NULL, 0);
 
-	addr = 0x1E;
 
-	i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+	// // Read filtered value
+	// addr = 0x04;
 
-	int base_val = rbuf[0];
+	// i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 2);
 
-	// Read touch status
+	// int filt_val = rbuf[1] << 8 | rbuf[0];
 
-	addr = 0x00;
+	// //Read baseline value
 
-	i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+	// addr = 0x1E;
 
-	int touch_status = rbuf[0];
+	// i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+	// int base_val = rbuf[0];
+
+	// // Read touch status
+
+	// addr = 0x00;
+
+	// i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+	// int touch_status = rbuf[0];
 	
 
-	snprintf(outBuf, 64, "T: %X, b: %d, f: %d\n\r", touch_status, base_val, filt_val);
-	serial_out(outBuf, 64); 
+	// snprintf(outBuf, 64, "T: %X, b: %d, f: %d\n\r", touch_status, base_val, filt_val);
+	// serial_out(outBuf, 64); 
 
 
 	// char floatBuf[10];
@@ -110,41 +139,47 @@ int main(void)
 	// mma_calibrate(4);
 
 
-	while(1) {
-		_delay_ms(100);
+	// while(1) {
+	// 	_delay_ms(100);
 		
 
-		// Read filtered value
-		addr = 0x04;
+	// 	_Bool e0, e1;
+	// 	mpr_get_touched(&e0, &e1);
 
-		i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 2);
+	// 	snprintf(outBuf, 64, "E0: %d, E1: %d\n\r", e0, e1);
+	// 	serial_out(outBuf, 64); 
 
-		filt_val = rbuf[1] << 8 | rbuf[0];
+		// // Read filtered value
+		// addr = 0x04;
 
-		//Read baseline value
+		// i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 2);
 
-		addr = 0x1E;
+		// filt_val = rbuf[1] << 8 | rbuf[0];
 
-		i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+		// //Read baseline value
 
-		base_val = rbuf[0];
+		// addr = 0x1E;
 
-		// Read touch status
+		// i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
 
-		addr = 0x00;
+		// base_val = rbuf[0];
 
-		i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+		// // Read touch status
 
-		touch_status = rbuf[0];
+		// addr = 0x00;
+
+		// i2c_io((0x5A << 1), &addr, 1, NULL, 0, rbuf, 1);
+
+		// touch_status = rbuf[0];
 		
 
-		snprintf(outBuf, 64, "T: %X, b: %d, f: %d\n\r", touch_status, base_val, filt_val);
-		serial_out(outBuf, 64); 
+		// snprintf(outBuf, 64, "T: %X, b: %d, f: %d\n\r", touch_status, base_val, filt_val);
+		// serial_out(outBuf, 64); 
 	
 
-		snprintf(outBuf, 64, "Capacitive touch data: %X\n\r", rbuf[0]);
-		serial_out(outBuf, 64); 
-	}
+		// snprintf(outBuf, 64, "Capacitive touch data: %X\n\r", rbuf[0]);
+		// serial_out(outBuf, 64); 
+	// }
 
 
 

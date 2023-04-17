@@ -1,7 +1,7 @@
 #ifndef MMA8451_H
 #define MMA8451_H
 
-#define UBRR 47
+// #define UBRR 47
 
 int calib_x;
 int calib_y;
