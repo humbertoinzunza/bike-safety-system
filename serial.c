@@ -6,7 +6,7 @@
 */
 void serial_init(unsigned short baud_rate)
 {
-    unsigned short ubrr = (CLOCKRATE/16)/baud_rate - 1;
+    unsigned short ubrr = (CLOCKRATE/16)/115200 - 1;
     UBRR0 = ubrr;           // Set baud rate
     UCSR0B |= (1 << TXEN0); // Turn on transmitter
     UCSR0B |= (1 << RXEN0); // Turn on receiver

@@ -1,0 +1,7 @@
+#ifndef STATES_H
+#define STATES_H
+
+
+enum states {IDLE, MONITORING, SEND_FALL, SEND_SEVERE_FALL, FALL, SEVERE_FALL};
+
+#endif
