@@ -1,6 +1,5 @@
 #include "serial.h"
 #include "gps.h"
-#include <stdlib.h>
 #include <avr/io.h>
 
 void get_gpgga(unsigned char *buffer)
@@ -28,166 +27,121 @@ void get_gpgga(unsigned char *buffer)
 
 unsigned char parse_sentence(unsigned char *buffer, short *response)
 {
-    unsigned char state = 0;
-    unsigned char index = 0;
-    unsigned char first_L[] = "GPGGA";
-    short latitude_decimal = 0;
-    short latitude_minutes = 0;
-    short longitude_decimal = 0;
-    short longitude_minutes = 0;
+    short lat_degs = 0;
+    short lat_mins_int = 0;
+    short lat_mins_dec = 0;
+    short lon_degs = 0;
+    short lon_mins_int = 0;
+    short lon_mins_dec = 0;
 
-    if(state == 0)
-    {
-        if(buffer[index++] == '$')
-        {
-            state = 1;
-        }
-        else
-        {
-            response[0] = 10;
-            return 1;
-        }
-    }
-    if(state == 1)
-    {
-        unsigned char i;
-        for(i=0; i<5; i++)
-        {
-            if(buffer[index++] != first_L[i])
-            {
-                response[0] = 11;
-                response[1] = buffer[index - 1];
-                response[2] = first_L[i];
-                response[3] = index - 1;
-                return 1;
-            }
-        }
-        if(buffer[index++] == ',')
-        {
-            state = 2;
-        }
-        else
-        {
-            response[0] = 12;
-            return 1;
-        }  
-    }
-    if(state == 2)
-    {
-        index = index + 10;
-        if(buffer[index++] == ',')
-        {
-            state = 3;
-        }
-        else
-        {
-            response[0] = 13;
-            return 1;
-        }
-    }
-    if(state == 3)
-    {
-        unsigned char i;
-        unsigned char lat[5];
-        for(i = 0; i<4; i++)
-        {
-            lat[i] = buffer[index++];
-        }
-        lat[4] = '\0';
-        latitude_decimal = atoi(lat);
-        if(buffer[index++] != '.')
-        {
-            response[0] = 14;
-            return 1;
-        }
-        for(i = 0; i<4; i++)
-        {
-            lat[i] = buffer[index++];
-        }
-        lat[4] = '\0';
-        latitude_minutes = atoi(lat);
-        latitude_minutes += (latitude_decimal%100)*1000;
-        latitude_decimal /= 100;
-        if(buffer[index++] == ',')
-        {
-            state = 4;
-        }
-        else
-        {
-            response[0] = 15;
-            return 1;
-        }
-    }
-    if(state == 4)
-    {
-        if(buffer[index] == 'S')
-        {
-            latitude_decimal = latitude_decimal*(-1);
-        }
-        else if(buffer[index] != 'S')
-        {
-            response[0] = 16;
-            return 1;
-        }
-        if(buffer[index++] == ',')
-        {
-            state = 5;
-        }
-        else
-        {
-            response[0] = 17;
-            return 1;
-        }
-    }
-    if(state == 5)
-    {
-        unsigned char lon[5];
-        unsigned char i;
-        for(i = 0; i<4; i++)
-        {
-            lon[i] = buffer[index++];
-        }
-        lon[4] = '\0';
-        longitude_decimal = atoi(lon);
-        if(buffer[index++] != '.')
-        {
-            response[0] = 18;
-            return 1;
-        }
-        for(i = 0; i<4; i++)
-        {
-            lon[i] = buffer[index++];
-        }
-        lon[4] = '\0';
-        longitude_minutes = atoi(lon);
-        longitude_minutes += (longitude_decimal%100)*1000;
-        longitude_decimal /= 100;
-         if(buffer[index++] == ',')
-        {
-            state = 6;
-        }
-        else
-        {
-            response[0] = 19;
-            return 1;
-        }
-    }
-    if(state == 6)
-    {
-        if(buffer[index] == 'W')
-        {
-            latitude_decimal = latitude_decimal*(-1);
-        }
-        else if(buffer[index] != 'E')
-        {
-            response[0] = 20;
-            return 1;
-        }
-    }
-    response[0] = latitude_decimal;
-    response[1] = latitude_minutes;
-    response[2] = longitude_decimal;
-    response[3] = longitude_minutes;
+    unsigned char commas_found = 0;
+    unsigned char chars_processed = 0;
 
-    return 0;
+    while (commas_found < 2) {
+        // Count the commas found
+        commas_found += buffer[chars_processed] == ',';
+        chars_processed++;
+    }
+    
+    unsigned char temp[6];
+    unsigned char temp_read = 0;
+    // Get the ddmm part in the NMEA sentence
+    while (buffer[chars_processed] != '.') {
+        // If we find an unexpected comma, return 0, indicating that we don't have data,
+        // probably because we didn't get a fix
+        if (buffer[chars_processed] == ',')
+            return 0;
+        temp[temp_read++] = buffer[chars_processed++];
+    }
+    // Discard period
+    chars_processed++;
+
+    // Add a termination character needed for atosh
+    temp[temp_read] = '\0';
+
+    // Get the degrees of the latitude and the integer part of the minutes of the latitude
+    lat_degs = atosh(temp);
+    lat_mins_int = lat_degs % 100;
+    lat_degs /= 100;
+
+    // Now get the decimal part of the minutes of the latitude
+    temp_read = 0;
+    
+    while (buffer[chars_processed] != ',') {
+        temp[temp_read++] = buffer[chars_processed++];
+    }
+    // Discard comma
+    chars_processed++;
+
+    // Add a termination character needed for atosh
+    temp[temp_read] = '\0';
+
+    // Get the decimal part of the minutes of the latitude as a short
+    lat_mins_dec = atosh(temp);
+
+    // If its latitude South, make the latitude negative
+    if (buffer[chars_processed++] == 'S') lat_degs *= -1;
+
+    // Ignore the next comma
+    chars_processed++;
+
+    temp_read = 0;
+    // Get the dddmm part in the NMEA sentence for the longitude
+    while (buffer[chars_processed] != '.') {
+        // If we find an unexpected comma, return 0, indicating that we don't have data,
+        // probably because we didn't get a fix
+        if (buffer[chars_processed] == ',')
+            return 0;
+        temp[temp_read++] = buffer[chars_processed++];
+    }
+
+    // Discard period
+    chars_processed++;
+
+    // Add a termination character needed for atosh
+    temp[temp_read] = '\0';
+
+    // Get the degrees of the longitude and the integer part of the minutes of the longitude
+    lon_degs = atosh(temp);
+    lon_mins_int = lon_degs % 100;
+    lon_degs /= 100;
+
+    // Now get the decimal part of the minutes of the longitude
+    temp_read = 0;
+    
+    while (buffer[chars_processed] != ',') {
+        temp[temp_read++] = buffer[chars_processed++];
+    }
+    // Discard comma
+    chars_processed++;
+
+    // Add a termination character needed for atosh
+    temp[temp_read] = '\0';
+
+    // Get the decimal part of the minutes of the longitude as a short
+    lon_mins_dec = atosh(temp);
+
+    // If its latitude South, make the latitude negative
+    if (buffer[chars_processed++] == 'W') lon_degs *= -1;
+
+    // Store the response
+    response[0] = lat_degs;
+    response[1] = lat_mins_int;
+    response[2] = lat_mins_dec;
+    response[3] = lon_degs;
+    response[4] = lon_mins_int;
+    response[5] = lon_mins_dec;
+
+    return 1;
+}
+
+short atosh(unsigned char *string)
+{
+    short res = 0;
+    unsigned char i = 0;
+    for(i = 0; string[i] != '\0'; i++) {
+        res = res * 10 + string[i] - '0';
+    }   
+
+    return res;
 }

@@ -3,5 +3,6 @@
 
 void get_gpgga(unsigned char *);
 unsigned char parse_sentence(unsigned char *, short *);
+short atosh(unsigned char *); 
 
 #endif
