@@ -1,8 +1,10 @@
 #ifndef GPS_H
 #define GPS_H
 
-void get_gpgga(unsigned char *);
-unsigned char parse_sentence(unsigned char *, short *);
-short atosh(unsigned char *); 
+void get_sentence(char *, char *);
+unsigned char parse_gga(char *);
+unsigned char parse_vtg(char *, unsigned short *, unsigned short *);
+unsigned char get_coordinates(char *, char *);
+void atoui16(char *, unsigned short *);
 
 #endif

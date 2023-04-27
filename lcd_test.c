@@ -1,72 +1,88 @@
 #include "i2c.h"
 #include "lcd.h"
-//#include "gps.h"
-//#include "serial.h"
+#include "gps.h"
+#include "serial.h"
 #include <util/delay.h>
 #include <avr/io.h>
-#include <math.h>
+#include <avr/interrupt.h>
 
 #define FOSC 7372970                        // Clock frequency = Oscillator freq.
 #define BAUD 9600              // Baud rate used by the LCD
 #define MYUBRR FOSC/16/BAUD-1   // Value for UBRR0 register
-#define BDIV (FOSC / 50000 - 16) / 2 + 1   // Puts I2C rate just below 50kHz
+#define BDIV (FOSC / 50000 - 16) / 2 + 1 // Puts I2C rate just below 50kHz
+// Circumference of a 700c bike wheel in miles
+#define MILES_PER_REV 0.001366466620877824f
 
-void abs(short *, short *, short *);
+void absolute(short *, short *, short *);
+volatile unsigned char rps = 0; // Revolutions per second
+volatile unsigned char seconds = 0;
+volatile float distance = 0.0f;
+volatile float speed = 0.0f;
+// LCD struct
+struct LCD lcd;
 
-int main(void)
+void setup()
 {
-  short prev_location[6];
-  short last_location[6];
-  short temp;
-  float temp_y, temp_x;
-  short *pl_ptr, *ll_ptr;
-  float total_distance = 0.0f;
-  float last_distance = 0.0f;
-  unsigned char i;
-  struct LCD lcd;
+  // Disable global interrupts
+  cli();
+  // Initialize I2C bus, LCD, and serial interface
   i2c_init(BDIV);
-  _delay_ms(1000);
   lcd_init(&lcd);
-  serial_init(MYUBRR);
-  unsigned char buffer[100];
-  unsigned char speed[25];
-  unsigned char distance[25];
-  unsigned char deg_symbol = 0xDF;
-  while(1) {
-    get_gpgga(buffer);
-    // Get the miles travelled through latitude
-    if(parse_sentence(buffer, last_location)) {
-      abs(&temp, &last_location[2], &prev_location[2]);
-      if (temp > 300) {
-        temp = 10000 - temp;
-      }
-      temp_y = 0.000115f * temp;
-      // Get the miles traveled through longitude
-      abs(&temp, &last_location[5], &prev_location[5]);
-      if (temp > 300) {
-        temp = 10000 - temp;
-      }
-      temp_x = 0.000091f * temp;
-      last_distance = sqrt(temp_x * temp_x + temp_y * temp_y);
-      total_distance += last_distance;
-      // Calculate speed (reuse variable temp_x)
-      temp_x *= 3600;
-      pl_ptr = prev_location;
-      ll_ptr = last_location;
-      // Set previous location to the last location
-      for (i = 0; i < 6; i++) *(pl_ptr++) = *(ll_ptr++);
-    }
-    sprintf(speed, "Speed: %.4f mph", temp_x);
-    sprintf(distance, "%.4f miles traveled");
-    set_cursor(&lcd, 0, 0);
-    print_string(&lcd, speed);
-    set_cursor(&lcd, 1, 0);
-    print_string(&lcd, distance);
-  }
+  
+  // Set PORTD bit 2 for input
+  DDRD &= ~_BV(DDD2);
+	// Pin Change Interrupt enable on PCINT2 (Enables PCMSK2 scan)
+	PCICR |= _BV(PCIE2);
+  // Enable scan for PCINT18 (PD2)
+  PCMSK2 |= _BV(PCINT18);
+  
+  //set timer1 interrupt at 1Hz
+  TCCR1A = 0; // Set entire TCCR1A register to 0
+  TCCR1B = 0; // Same for TCCR1B
+  TCNT1  = 0; // Initialize counter value to 0
+  // Set compare match register for 1Hz increments
+  OCR1A = 7199; // = (7372970) / (1*1024) - 1 (must be <65536)
+  // Turn on CTC mode
+  TCCR1B |= (1 << WGM12);
+  // Set CS10 and CS12 bits for 1024 prescaler
+  TCCR1B |= (1 << CS12) | (1 << CS10);  
+  // Enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+  // Enable global interrupts
+  sei();
 }
 
-void abs(short *ret_val, short *a, short *b) {
+int main(void) {
+  // Buffer for printing on screen
+  char buffer[25];
+  setup();
+  while (1) {
+    set_cursor(&lcd, 0, 0);
+    sprintf(buffer, "%.2f mph", speed);
+    print_string(&lcd, buffer);
+    set_cursor(&lcd, 1, 0);
+    sprintf(buffer, "Traveled %.2f mi", distance);
+    print_string(&lcd, buffer);
+  }
+    return 0;   /* never reached */
+}
+
+void absolute(short *ret_val, short *a, short *b) {
   *ret_val = *a - *b;
   if (*ret_val < 0) *ret_val = -(*ret_val);
+}
+
+ISR(PCINT2_vect) {
+  if (PIND & (1 << PIND2))
+    rps++;
+}
+
+ISR(TIMER1_COMPA_vect) {
+  cli();
+  speed = rps * MILES_PER_REV; // Miles traveled in the second passed
+  distance += speed;
+  speed *= 3600; // To get miles per hour
+  rps = 0;
+  sei();
 }
 

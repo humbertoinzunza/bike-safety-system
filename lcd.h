@@ -56,8 +56,10 @@ void display_firmware_version(struct LCD *);
 
 void display_i2c_address(struct LCD *);
 
-void print_character(struct LCD *, unsigned char);
+void print_character(struct LCD *, char);
 
-void print_string(struct LCD *lcd, unsigned char *);
+void print_string(struct LCD *lcd, char *);
+
+void print_array(struct LCD *lcd, char *, unsigned short);
 
 #endif

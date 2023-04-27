@@ -60,6 +60,8 @@ void set_cursor(struct LCD *lcd, unsigned char row, unsigned char col) {
     unsigned char rows[] = { 0x00, 0x40, 0x14, 0x54};
     pos[0] = rows[row] + col;
     send_param_command(lcd, 0x45, pos, 1);
+    lcd->row = row;
+    lcd->col = col;
     _delay_us(100);
 }
 
@@ -192,22 +194,29 @@ void display_i2c_address(struct LCD *lcd) {
 }
 
 // This command displays the given character.
-void print_character(struct LCD *lcd, unsigned char character) {
+void print_character(struct LCD *lcd, char character) {
     unsigned char buf[1] = { character };
     i2c_io(lcd->address, buf, 1, NULL, 0, NULL, 0);
+    _delay_us(100);
     if(++lcd->col > 19) {
         lcd->col = 0;
         if(++lcd->row > 3)
             lcd->row = 0;
         set_cursor(lcd, lcd->row, lcd->col);
     }
-    _delay_us(100);
 }
 
-void print_string(struct LCD *lcd, unsigned char *string) {
+void print_string(struct LCD *lcd, char *string) {
     unsigned char index = 0;
     while(string[index] != '\0') {
         print_character(lcd, string[index]);
         index++;
+    }
+}
+
+void print_array(struct LCD *lcd, char *array, unsigned short length) {
+    unsigned short i;
+    for (i = 0; i < length; i++) {
+        print_character(lcd, array[i]);
     }
 }

@@ -1,7 +1,7 @@
 DEVICE     = atmega328p
-CLOCK      = 7372970
+CLOCK      = 7372800
 PROGRAMMER = -c usbtiny -P usb
-OBJECTS    = lcd_test.o i2c.o lcd.o
+OBJECTS    = main.o i2c.o serial.o mma8451.o mpr121.o SIM.o lcd.o gps.o
 FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0xe0:m
 
 # Fuse Low Byte = 0xe0   Fuse High Byte = 0xd9   Fuse Extended Byte = 0xff
@@ -23,8 +23,7 @@ FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0xe0:m
 # Tune the lines below only if you know what you are doing:
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
-DEPENDENCIES = i2c.c
+COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -Wl,-u,vfprintf -lprintf_flt -lm
 
 # symbolic targets:
 all:	main.hex
@@ -50,12 +49,6 @@ fuse:
 
 # Xcode uses the Makefile targets "", "clean" and "install"
 install: flash fuse
-
-i2c.o: i2c.c i2c.h
-	$(COMPILE) -c i2c.c
-
-lcd.o: lcd.c lcd.h
-	$(COMPILE) -c lcd.c
 
 # if you use a bootloader, change the command below appropriately:
 load: all

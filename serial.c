@@ -1,5 +1,4 @@
 #include <avr/io.h>
-#include <avr/interrupt.h>
 #include "serial.h"
 
 /*
@@ -38,9 +37,4 @@ char serial_in()
 {
     while (!( UCSR0A & (1 << RXC0)));
     return UDR0;
-}
-
-// Use interrupts to 
-ISR(USART_RX_vect) {
-
 }
